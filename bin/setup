@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${APP_ROOT}"
+
+# Avoid native extension build failures from spaces in the project path by
+# installing gems into a space-free directory.
+export BUNDLE_PATH="${BUNDLE_PATH:-/tmp/servercompass-bundle}"
+export BUNDLE_FORCE_RUBY_PLATFORM="${BUNDLE_FORCE_RUBY_PLATFORM:-1}"
+
+echo "Installing gems into: ${BUNDLE_PATH}"
+bundle config set --local path "${BUNDLE_PATH}"
+bundle config set --local force_ruby_platform true
+bundle install
+
+echo "Running database migrations..."
+bundle exec rails db:migrate
+
+echo "Seeding development data..."
+bundle exec rails db:seed
+
+cat <<MSG
+
+Setup complete.
+
+Start the API server with:
+  cd "${APP_ROOT}"
+  BUNDLE_PATH=${BUNDLE_PATH} bundle exec rails server -p 3000
+
+MSG
