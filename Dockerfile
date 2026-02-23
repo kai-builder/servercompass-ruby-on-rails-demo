@@ -43,8 +43,11 @@ RUN bundle config set --local deployment true && \
     bundle config set --local path vendor/bundle && \
     bundle config set --local without "development test"
 
+# Create required directories
+RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
+
 # Create entrypoint
-RUN printf '#!/bin/sh\nset -e\nbundle exec rails db:migrate 2>/dev/null || true\nexec bundle exec puma -C config/puma.rb\n' \
+RUN printf '#!/bin/sh\nset -e\nmkdir -p tmp/pids tmp/cache tmp/sockets log\nbundle exec rails db:migrate 2>/dev/null || true\nexec bundle exec puma -C config/puma.rb\n' \
     > /usr/local/bin/docker-entrypoint && \
     chmod +x /usr/local/bin/docker-entrypoint
 
