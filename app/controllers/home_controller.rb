@@ -40,25 +40,25 @@ class HomeController < ApplicationController
           <title>Server Compass Env Demo</title>
           <style>
             :root {
-              --bg: #0f172a;
-              --panel: rgba(255, 255, 255, 0.08);
-              --card: rgba(255, 255, 255, 0.06);
-              --text: #e2e8f0;
-              --muted: #94a3b8;
-              --accent: #60a5fa;
-              --accent-2: #c084fc;
-              --border: rgba(255, 255, 255, 0.16);
-              --shadow: 0 18px 35px rgba(0, 0, 0, 0.35);
+              --bg: #121212;
+              --panel: #1e1e1e;
+              --card: #252525;
+              --text: #f0f0f0;
+              --muted: #a0a0a0;
+              --accent: #e0a040;
+              --accent-2: #d4783f;
+              --border: rgba(255, 255, 255, 0.10);
+              --shadow: 0 18px 35px rgba(0, 0, 0, 0.5);
               --radius: 18px;
+              --btn: #2a2a2a;
+              --btn-hover: #333333;
             }
             * { box-sizing: border-box; }
             body {
               margin: 0;
               padding: 0;
               font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-              background: radial-gradient(circle at 20% 20%, rgba(96,165,250,0.18), transparent 30%),
-                          radial-gradient(circle at 80% 0%, rgba(192,132,252,0.12), transparent 25%),
-                          var(--bg);
+              background: var(--bg);
               color: var(--text);
               min-height: 100vh;
               display: flex;
@@ -72,7 +72,6 @@ class HomeController < ApplicationController
               border: 1px solid var(--border);
               border-radius: 22px;
               box-shadow: var(--shadow);
-              backdrop-filter: blur(8px);
               padding: 32px;
             }
             header {
@@ -85,14 +84,15 @@ class HomeController < ApplicationController
             .badge {
               padding: 6px 12px;
               border-radius: 999px;
-              background: linear-gradient(120deg, rgba(96,165,250,0.35), rgba(192,132,252,0.35));
-              color: #0b1221;
+              background: var(--btn);
+              border: 1px solid var(--border);
+              color: var(--accent);
               font-weight: 700;
               font-size: 12px;
               letter-spacing: 0.02em;
               text-transform: uppercase;
             }
-            h1 { margin: 0; font-size: 26px; }
+            h1 { margin: 0; font-size: 26px; color: #ffffff; }
             p.lede { margin: 6px 0 24px; color: var(--muted); }
             .grid {
               display: grid;
@@ -111,6 +111,7 @@ class HomeController < ApplicationController
               margin: 0 0 12px;
               font-size: 16px;
               letter-spacing: 0.01em;
+              color: #ffffff;
             }
             dl { margin: 0; }
             .row {
@@ -135,7 +136,7 @@ class HomeController < ApplicationController
           <main class="shell">
             <header>
               <h1>Server Compass Env Demo</h1>
-              <span class="badge">Rails 5.2 API</span>
+              <span class="badge">Rails 7.2 API</span>
             </header>
             <p class="lede">Live view of environment values. Unset variables show <span class="muted">Not set</span>.</p>
             <div class="grid">

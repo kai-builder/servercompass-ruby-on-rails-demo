@@ -1,34 +1,55 @@
-FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+# syntax=docker/dockerfile:1
+# ── Stage 1: gem install ──────────────────────────────────────────────────────
+FROM ruby:3.3-slim AS builder
 
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
-WORKDIR /app/
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        libsqlite3-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
 
+COPY Gemfile Gemfile.lock ./
 
-RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends procps git curl autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev
+RUN bundle config set --local deployment true && \
+    bundle config set --local without "development test" && \
+    bundle install --jobs 4 --retry 3
 
-ARG BUNDLE_GEMFILE GEM_HOME GEM_PATH MALLOC_ARENA_MAX NIXPACKS_METADATA RAILS_LOG_TO_STDOUT RAILS_SERVE_STATIC_FILES
-ENV BUNDLE_GEMFILE=$BUNDLE_GEMFILE GEM_HOME=$GEM_HOME GEM_PATH=$GEM_PATH MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX NIXPACKS_METADATA=$NIXPACKS_METADATA RAILS_LOG_TO_STDOUT=$RAILS_LOG_TO_STDOUT RAILS_SERVE_STATIC_FILES=$RAILS_SERVE_STATIC_FILES
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM ruby:3.3-slim AS runtime
 
-# setup phase
-ENV NIXPACKS_PATH=$HOME/.rbenv/bin:$NIXPACKS_PATH
-RUN  curl -fsSL https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer | bash -s stable && printf '\neval "$(~/.rbenv/bin/rbenv init -)"' >> /root/.profile && . /root/.profile && rbenv install >= 2.6.0 && rbenv global >= 2.6.0 && gem install bundler:1.17.2
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+        libsqlite3-0 \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
 
-# install phase
-ENV NIXPACKS_PATH=/usr/local/rvm/rubies/ruby->=2.6.0/bin:/usr/local/rvm/gems/ruby->=2.6.0/bin:/usr/local/rvm/gems/ruby->=2.6.0@global/bin:$NIXPACKS_PATH
-COPY Gemfile /app/Gemfile
-COPY Gemfile.lock /app/Gemfile.lock
-RUN --mount=type=cache,id=qGlzefqvHw-/root/bundle/cache,target=/root/.bundle/cache bundle install
+ENV RAILS_ENV=production \
+    RACK_ENV=production \
+    RAILS_LOG_TO_STDOUT=true \
+    RAILS_SERVE_STATIC_FILES=true \
+    SECRET_KEY_BASE=dummy_key_replace_in_production
 
-# build phase
-COPY . /app/.
-RUN  bundle exec rake assets:precompile
+WORKDIR /app
 
-RUN printf '\nPATH=$HOME/.rbenv/bin:$PATH' >> /root/.profile
-RUN printf '\nPATH=/usr/local/rvm/rubies/ruby->= 2.6.0/bin:/usr/local/rvm/gems/ruby->= 2.6.0/bin:/usr/local/rvm/gems/ruby->= 2.6.0@global/bin:$PATH' >> /root/.profile
+COPY --from=builder /app/vendor/bundle vendor/bundle
+COPY --from=builder /usr/local/bundle/config /usr/local/bundle/config
+COPY . .
 
+RUN bundle config set --local deployment true && \
+    bundle config set --local path vendor/bundle && \
+    bundle config set --local without "development test"
 
-# start
-COPY . /app
+# Create entrypoint
+RUN printf '#!/bin/sh\nset -e\nbundle exec rails db:migrate 2>/dev/null || true\nexec bundle exec puma -C config/puma.rb\n' \
+    > /usr/local/bin/docker-entrypoint && \
+    chmod +x /usr/local/bin/docker-entrypoint
 
-CMD ["bundle exec bin/rails server -b 0.0.0.0 -p ${PORT:-3000} -e $RAILS_ENV"]
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD wget -qO- http://localhost:3000/health || exit 1
+
+CMD ["/usr/local/bin/docker-entrypoint"]
